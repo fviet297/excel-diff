@@ -40,3 +40,47 @@
 .read-the-docs {
   color: #888;
 }
+
+.section {
+  margin-bottom: 20px;
+  padding: 15px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  background: #f9f9f9;
+}
+
+.section label {
+  display: block;
+  font-weight: bold;
+  margin-bottom: 8px;
+  color: #2c3e50;
+}
+
+.section input[type="file"] {
+  width: 100%;
+  padding: 8px;
+}
+
+.sheet-selector .sheet-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 10px 0;
+}
+
+.sheet-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.95em;
+}
+
+.sheet-item input[type="checkbox"] {
+  margin: 0;
+}
+
+.result.pass {
+  background: #eafaf1;
+  border-left-color: #27ae60;
+  color: #1e8449;
+}
