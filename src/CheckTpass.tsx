@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import * as XLSX from 'xlsx';
 import { Upload, AlertCircle, CheckCircle, XCircle, Download, FileSpreadsheet } from 'lucide-react';
+import AppFooter from './AppFooter';
 
 interface CardRow {
   card: string;
@@ -188,7 +189,7 @@ export default function App() {
           file1NotYetCards.add(row.card);
         }
       });
-    
+
       data2.forEach((row2) => {
         if (row2.status.toLowerCase() === 'active') {
           if (!file1NotYetCards.has(row2.card)) {
@@ -240,7 +241,7 @@ export default function App() {
               <div className="text-center mb-8">
                 <h1 className="text-3xl font-bold text-gray-800 mb-2 flex items-center justify-center gap-2">
                   <FileSpreadsheet className="w-8 h-8 text-indigo-600" />
-                  Kiểm tra thẻ T-Pass
+                  T-Pass Checker
                 </h1>
                 <p className="text-gray-600">Upload 2 file → Chọn sheet → Kiểm tra trạng thái</p>
               </div>
@@ -249,7 +250,7 @@ export default function App() {
               <div className="grid md:grid-cols-2 gap-6 mb-6">
                 <div className={`border-2 border-dashed rounded-xl p-6 text-center transition-all ${file1 ? 'border-green-400 bg-green-50' : 'border-gray-300 hover:border-gray-400'}`}>
                   <Upload className="w-12 h-12 mx-auto mb-3 text-gray-400" />
-                  <label className="block font-medium text-gray-700 mb-2">File 1 (Returned / Not Yet Return)</label>
+                  <label className="block font-medium text-gray-700 mb-2">File T-Pass</label>
                   <input
                     type="file"
                     accept=".xlsx"
@@ -258,14 +259,14 @@ export default function App() {
                     id="file1"
                   />
                   <label htmlFor="file1" className="cursor-pointer inline-block px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm">
-                    Chọn file
+                    Upload
                   </label>
                   {file1 && <p className="mt-2 text-sm text-green-700 font-medium">{file1.name}</p>}
                 </div>
 
                 <div className={`border-2 border-dashed rounded-xl p-6 text-center transition-all ${file2 ? 'border-green-400 bg-green-50' : 'border-gray-300 hover:border-gray-400'}`}>
                   <Upload className="w-12 h-12 mx-auto mb-3 text-gray-400" />
-                  <label className="block font-medium text-gray-700 mb-2">File 2 (Active, Expired, ...)</label>
+                  <label className="block font-medium text-gray-700 mb-2">File Report GLG</label>
                   <input
                     type="file"
                     accept=".xlsx"
@@ -274,7 +275,7 @@ export default function App() {
                     id="file2"
                   />
                   <label htmlFor="file2" className="cursor-pointer inline-block px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 text-sm">
-                    Chọn file
+                    Upload
                   </label>
                   {file2 && <p className="mt-2 text-sm text-green-700 font-medium">{file2.name}</p>}
                 </div>
@@ -284,26 +285,19 @@ export default function App() {
                 <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-6 mb-6 border">
                   <div className="flex items-center justify-between mb-4">
                     <h3 className="text-lg font-semibold text-gray-800">Chọn sheet từ File 1</h3>
-                    <button
-                      onClick={toggleAllSheets}
-                      className="text-sm text-blue-600 hover:text-blue-800 underline"
-                    >
-                      {file1Sheets.every(s => s.selected) ? 'Bỏ chọn tất cả' : 'Chọn tất cả'}
-                    </button>
+
                   </div>
 
-                  {/* Dropdown đa lựa chọn */}
+                  {/* Dropdown đơn lựa chọn */}
                   <select
-                    multiple
-                    value={file1Sheets.filter(s => s.selected).map(s => s.name)}
+                    value={file1Sheets.find(s => s.selected)?.name || ""}
                     onChange={(e) => {
-                      const selected = Array.from(e.target.selectedOptions, opt => opt.value);
-                      setFile1Sheets(prev =>
-                        prev.map(s => ({ ...s, selected: selected.includes(s.name) }))
-                      );
+                      const name = e.target.value;
+                      setFile1Sheets(prev => prev.map(s => ({ ...s, selected: s.name === name })));
                     }}
-                    className="w-full h-48 p-3 bg-white border rounded-lg text-sm font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 overflow-y-auto"
+                    className="w-full p-3 bg-white border rounded-lg text-sm font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
+                    <option value="" disabled>Chọn một sheet...</option>
                     {file1Sheets.map(sheet => (
                       <option key={sheet.name} value={sheet.name} className="py-1">
                         {sheet.name}
@@ -337,7 +331,7 @@ export default function App() {
                   ) : (
                     <>
                       <CheckCircle className="w-5 h-5" />
-                      Kiểm tra
+                      Check
                     </>
                   )}
                 </button>
@@ -395,12 +389,7 @@ export default function App() {
           </div>
         </div>
 
-        {/* Footer */}
-        <footer className="bg-gradient-to-r from-blue-600 to-indigo-700 text-white py-6 mt-auto">
-          <div className="max-w-7xl mx-auto px-6 text-center text-sm">
-            <p>© 2025 T-Pass Checker. Được xây dựng với React + Tailwind CSS</p>
-          </div>
-        </footer>
+        
       </div>
     </>
   );
