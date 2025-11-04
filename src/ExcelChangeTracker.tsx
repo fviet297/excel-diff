@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Upload, FileSpreadsheet, AlertCircle, Download, CheckCircle, XCircle, Edit, ChevronDown, Minus, Plus } from 'lucide-react';
+import { Upload, FileSpreadsheet, AlertCircle, Download, CheckCircle, XCircle, Edit, ChevronDown, Minus, Plus, Mail, Phone, Linkedin, Github } from 'lucide-react';
 import * as XLSX from 'xlsx';
 
 const ExcelChangeTracker = () => {
@@ -19,7 +19,7 @@ const ExcelChangeTracker = () => {
       const reader = new FileReader();
       reader.onload = (e) => {
         try {
-          const data = new Uint8Array(e.target.result as ArrayBuffer);
+          const data = new Uint8Array(e.target!.result as ArrayBuffer);
           const workbook = XLSX.read(data, { type: 'array' });
           const sheets = workbook.SheetNames;
           const sheetData: any = {};
@@ -356,138 +356,172 @@ const ExcelChangeTracker = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-6">
-      <div className="max-w-7xl mx-auto">
-        <div className="bg-white rounded-2xl shadow-xl p-8">
-          <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold text-gray-800 mb-2">
-              So Sánh 2 Sheet Excel (Git Diff Style)
-            </h1>
-            <p className="text-gray-600">Upload 2 file → Chọn sheet → Xem diff như Git</p>
-          </div>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex flex-col">
+      {/* Main Content */}
+      <div className="flex-1 p-6">
+        <div className="max-w-7xl mx-auto">
+          <div className="bg-white rounded-2xl shadow-xl p-8">
+            <div className="text-center mb-8">
+              <h1 className="text-3xl font-bold text-gray-800 mb-2">
+                Git Diff Style
+              </h1>
+              <p className="text-gray-600">Upload 2 file → Chọn sheet → Check diff</p>
+            </div>
 
-          {/* Upload Files */}
-          <div className="grid md:grid-cols-2 gap-6 mb-6">
-            <FileUploadBox
-              label="Upload File Gốc"
-              file={originalFile}
-              onChange={handleFileUpload}
-              color={originalFile ? 'border-green-300 bg-green-50' : 'border-gray-300'}
-              isOriginal={true}
-            />
-            <FileUploadBox
-              label="Upload File Đã Sửa"
-              file={modifiedFile}
-              onChange={handleFileUpload}
-              color={modifiedFile ? 'border-green-300 bg-green-50' : 'border-gray-300'}
-              isOriginal={false}
-            />
-          </div>
-
-          {/* Sheet Selectors */}
-          {(originalSheets.length > 0 || modifiedSheets.length > 0) && (
-            <div className="grid md:grid-cols-2 gap-6 mb-6 p-6 bg-gray-50 rounded-xl border">
-              <SheetSelector
-                sheets={originalSheets}
-                selected={selectedOrigSheet}
-                onChange={setSelectedOrigSheet}
-                label="Chọn sheet từ file gốc"
+            {/* Upload Files */}
+            <div className="grid md:grid-cols-2 gap-6 mb-6">
+              <FileUploadBox
+                label="Upload File Gốc"
+                file={originalFile}
+                onChange={handleFileUpload}
+                color={originalFile ? 'border-green-300 bg-green-50' : 'border-gray-300'}
+                isOriginal={true}
               />
-              <SheetSelector
-                sheets={modifiedSheets}
-                selected={selectedModSheet}
-                onChange={setSelectedModSheet}
-                label="Chọn sheet từ file đã sửa"
+              <FileUploadBox
+                label="Upload File Đã Sửa"
+                file={modifiedFile}
+                onChange={handleFileUpload}
+                color={modifiedFile ? 'border-green-300 bg-green-50' : 'border-gray-300'}
+                isOriginal={false}
               />
             </div>
-          )}
 
-          {/* Error */}
-          {error && (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6 flex items-center gap-3">
-              <AlertCircle className="w-5 h-5 text-red-500" />
-              <span className="text-red-700">{error}</span>
-            </div>
-          )}
-
-          {/* Action Buttons */}
-          <div className="flex gap-4 justify-center mb-8">
-            <button
-              onClick={handleCompare}
-              disabled={!originalFile || !modifiedFile || !selectedOrigSheet || !selectedModSheet || loading}
-              className="px-6 py-3 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-lg font-medium hover:from-blue-600 hover:to-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 shadow-lg"
-            >
-              <Upload className="w-5 h-5" />
-              {loading ? 'Đang so sánh...' : 'So Sánh Sheet'}
-            </button>
-
-            {changes && (
-              <button
-                onClick={exportChanges}
-                className="px-6 py-3 bg-green-500 text-white rounded-lg font-medium hover:bg-green-600 flex items-center gap-2 shadow-lg"
-              >
-                <Download className="w-5 h-5" />
-                Tải Báo Cáo
-              </button>
-            )}
-          </div>
-
-          {/* Results - Git Diff Style Table */}
-          {changes && (
-            <div className="space-y-8">
-              <div className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-lg p-6 shadow-lg">
-                <h2 className="text-2xl font-bold mb-2">Kết Quả So Sánh (Git Diff)</h2>
-                <div className="text-lg">
-                  <span className="font-medium">{selectedOrigSheet}</span> → <span className="font-medium">{selectedModSheet}</span>
-                  <br />
-                  Tổng thay đổi: <span className="font-bold">{getTotalChanges()}</span> thay đổi
-                  {' | '} Không thay đổi: <span className="font-bold">{Object.values(changes)[0].unchanged}</span> dòng
-                </div>
+            {/* Sheet Selectors */}
+            {(originalSheets.length > 0 || modifiedSheets.length > 0) && (
+              <div className="grid md:grid-cols-2 gap-6 mb-6 p-6 bg-gray-50 rounded-xl border">
+                <SheetSelector
+                  sheets={originalSheets}
+                  selected={selectedOrigSheet}
+                  onChange={setSelectedOrigSheet}
+                  label="Chọn sheet từ file gốc"
+                />
+                <SheetSelector
+                  sheets={modifiedSheets}
+                  selected={selectedModSheet}
+                  onChange={setSelectedModSheet}
+                  label="Chọn sheet từ file đã sửa"
+                />
               </div>
+            )}
 
-              {Object.entries(changes).map(([sheetName, change]: [string, any]) => {
-                const origData = change.deleted.length > 0 ? change.deleted[0].data : []; // Để tính maxCols
-                const modData = change.added.length > 0 ? change.added[0].data : [];
-                const allRows = [...change.deleted.map((d: any) => d.originalRow || d.data), ...change.modified.map((m: any) => m.originalRow), ...change.added.map((a: any) => a.data)];
-                const maxCols = Math.max(getMaxCols(allRows, allRows), 1); // Ít nhất 1 cột
+            {/* Error */}
+            {error && (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6 flex items-center gap-3">
+                <AlertCircle className="w-5 h-5 text-red-500" />
+                <span className="text-red-700">{error}</span>
+              </div>
+            )}
 
-                return (
-                  <div key={sheetName} className="border border-gray-300 rounded-lg overflow-hidden shadow-md">
-                    <div className="bg-gray-100 px-6 py-3 border-b flex items-center justify-between">
-                      <h3 className="text-xl font-bold text-gray-800">
-                        {change.origSheetName} → {change.modSheetName}
-                      </h3>
-                      <div className="text-sm text-gray-600">
-                        +{change.added.length}  -{change.deleted.length}  ~{change.modified.length}
+            {/* Action Buttons */}
+            <div className="flex gap-4 justify-center mb-8">
+              <button
+                onClick={handleCompare}
+                disabled={!originalFile || !modifiedFile || !selectedOrigSheet || !selectedModSheet || loading}
+                className="px-6 py-3 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-lg font-medium hover:from-blue-600 hover:to-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 shadow-lg"
+              >
+                <Upload className="w-5 h-5" />
+                {loading ? 'Đang so sánh...' : 'So Sánh'}
+              </button>
+
+              {changes && (
+                <button
+                  onClick={exportChanges}
+                  className="px-6 py-3 bg-green-500 text-white rounded-lg font-medium hover:bg-green-600 flex items-center gap-2 shadow-lg"
+                >
+                  <Download className="w-5 h-5" />
+                  Tải Báo Cáo
+                </button>
+              )}
+            </div>
+
+            {/* Results - Git Diff Style Table */}
+            {changes && (
+              <div className="space-y-8">
+                <div className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-lg p-6 shadow-lg">
+                  <h2 className="text-2xl font-bold mb-2">Kết Quả So Sánh (Git Diff)</h2>
+                  <div className="text-lg">
+                    <span className="font-medium">{selectedOrigSheet}</span> → <span className="font-medium">{selectedModSheet}</span>
+                    <br />
+                    Tổng thay đổi: <span className="font-bold">{getTotalChanges()}</span> thay đổi
+                    {' | '} Không thay đổi: <span className="font-bold">{Object.values(changes)[0].unchanged}</span> dòng
+                  </div>
+                </div>
+
+                {Object.entries(changes).map(([sheetName, change]: [string, any]) => {
+                  const origData = change.deleted.length > 0 ? change.deleted[0].data : []; // Để tính maxCols
+                  const modData = change.added.length > 0 ? change.added[0].data : [];
+                  const allRows = [...change.deleted.map((d: any) => d.originalRow || d.data), ...change.modified.map((m: any) => m.originalRow), ...change.added.map((a: any) => a.data)];
+                  const maxCols = Math.max(getMaxCols(allRows, allRows), 1); // Ít nhất 1 cột
+
+                  return (
+                    <div key={sheetName} className="border border-gray-300 rounded-lg overflow-hidden shadow-md">
+                      <div className="bg-gray-100 px-6 py-3 border-b flex items-center justify-between">
+                        <h3 className="text-xl font-bold text-gray-800">
+                          {change.origSheetName} → {change.modSheetName}
+                        </h3>
+                        <div className="text-sm text-gray-600">
+                          +{change.added.length}  -{change.deleted.length}  ~{change.modified.length}
+                        </div>
+                      </div>
+
+                      <div className="overflow-x-auto">
+                        <table className="min-w-full divide-y divide-gray-300 text-xs font-mono">
+                          {renderHeader(maxCols)}
+                          <tbody className="bg-white divide-y divide-gray-200">
+                            {/* Deleted rows */}
+                            {change.deleted.map((item: any) => renderDiffRow(item, maxCols, false, true))}
+
+                            {/* Modified & Added rows (interleaved by rowIndex) */}
+                            {[...change.modified, ...change.added].sort((a: any, b: any) => a.rowIndex - b.rowIndex).map((item: any) => 
+                              renderDiffRow(item, maxCols, 'data' in item, false)
+                            )}
+                          </tbody>
+                        </table>
+                        {change.unchanged > 0 && (
+                          <div className="px-6 py-3 text-sm text-gray-600 bg-gray-50">
+                            ... và {change.unchanged} dòng không thay đổi (đã ẩn để tập trung vào diff)
+                          </div>
+                        )}
                       </div>
                     </div>
-
-                    <div className="overflow-x-auto">
-                      <table className="min-w-full divide-y divide-gray-300 text-xs font-mono">
-                        {renderHeader(maxCols)}
-                        <tbody className="bg-white divide-y divide-gray-200">
-                          {/* Deleted rows */}
-                          {change.deleted.map((item: any) => renderDiffRow(item, maxCols, false, true))}
-
-                          {/* Modified & Added rows (interleaved by rowIndex) */}
-                          {[...change.modified, ...change.added].sort((a: any, b: any) => a.rowIndex - b.rowIndex).map((item: any) => 
-                            renderDiffRow(item, maxCols, 'data' in item, false)
-                          )}
-                        </tbody>
-                      </table>
-                      {change.unchanged > 0 && (
-                        <div className="px-6 py-3 text-sm text-gray-600 bg-gray-50">
-                          ... và {change.unchanged} dòng không thay đổi (đã ẩn để tập trung vào diff)
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
+                  );
+                })}
+              </div>
+            )}
+          </div>
         </div>
       </div>
+
+      {/* FOOTER */}
+      <footer className="bg-gradient-to-r from-blue-600 to-indigo-700 text-white py-6 mt-auto">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm">
+            <div className="flex items-center gap-2">
+              <Mail className="w-5 h-5" />
+              <a href="mailto:fviet295@gmail.com" className="hover:underline transition">fviet295@gmail.com</a>
+            </div>
+            <div className="flex items-center gap-2">
+              <Phone className="w-5 h-5" />
+              <span>0937 088 941</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Linkedin className="w-5 h-5" />
+              <a href="https://www.linkedin.com/in/vietdp" target="_blank" rel="noopener noreferrer" className="hover:underline transition">
+              https://www.linkedin.com/in/vietdp
+              </a>
+            </div>
+            <div className="flex items-center gap-2">
+              <Github className="w-5 h-5" />
+              <a href="https://github.com/fviet297" target="_blank" rel="noopener noreferrer" className="hover:underline transition">
+              https://github.com/fviet297
+              </a>
+            </div>
+          </div>
+          <div className="text-center text-xs mt-4 opacity-80">
+            © Da Nang 2025 Excel Git Diff Tool. All rights reserved.
+          </div>
+        </div>
+      </footer>
     </div>
   );
 };
