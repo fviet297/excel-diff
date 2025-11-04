@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Upload, FileSpreadsheet, AlertCircle, Download, CheckCircle, XCircle, Edit, ChevronDown } from 'lucide-react';
+import { Upload, FileSpreadsheet, AlertCircle, Download, CheckCircle, XCircle, Edit, ChevronDown, Minus, Plus } from 'lucide-react';
 import * as XLSX from 'xlsx';
 
 const ExcelChangeTracker = () => {
@@ -73,6 +73,95 @@ const ExcelChangeTracker = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Tính max columns cho header
+  const getMaxCols = (origData: any[][], modData: any[][]) => {
+    return Math.max(
+      ...origData.map(row => row.length),
+      ...modData.map(row => row.length)
+    );
+  };
+
+  // Render header bảng
+  const renderHeader = (maxCols: number) => {
+    return (
+      <thead>
+        <tr className="bg-gray-100">
+          <th className="px-3 py-2 text-left text-xs font-medium text-gray-700 uppercase tracking-wider border-r">#</th>
+          {Array.from({ length: maxCols }, (_, j) => (
+            <th key={j} className="px-3 py-2 text-left text-xs font-medium text-gray-700 uppercase tracking-wider border-r">
+              {String.fromCharCode(65 + j)}
+            </th>
+          ))}
+        </tr>
+      </thead>
+    );
+  };
+
+  // Render cell với diff
+  const renderCell = (value: string, type: 'old' | 'new' | 'unchanged') => {
+    const baseClass = "px-3 py-1 text-sm border-r whitespace-nowrap overflow-hidden text-ellipsis max-w-xs";
+    if (type === 'old') return <td className={`${baseClass} bg-red-100 text-red-800 line-through`}>{value}</td>;
+    if (type === 'new') return <td className={`${baseClass} bg-green-100 text-green-800 font-medium`}>{value}</td>;
+    return <td className={`${baseClass} bg-white`}>{value}</td>;
+  };
+
+  // Render một row diff kiểu Git
+  const renderDiffRow = (item: any, maxCols: number, isAdded: boolean, isDeleted: boolean) => {
+    const rowIndex = item.rowIndex + 1;
+    if (isAdded) {
+      return (
+        <tr key={`added-${item.rowIndex}`} className="bg-green-50">
+          <td className="px-3 py-1 text-sm font-medium text-green-700 border-r flex items-center gap-1">
+            <Plus className="w-4 h-4" /> {rowIndex}
+          </td>
+          {item.data.map((cell: any, j: number) => renderCell(String(cell || ''), 'new'))}
+          {Array.from({ length: maxCols - item.data.length }, (_, j) => (
+            <td key={`empty-new-${j}`} className="px-3 py-1 text-sm border-r bg-green-100"></td>
+          ))}
+        </tr>
+      );
+    }
+
+    if (isDeleted) {
+      return (
+        <tr key={`deleted-${item.rowIndex}`} className="bg-red-50">
+          <td className="px-3 py-1 text-sm font-medium text-red-700 border-r flex items-center gap-1">
+            <Minus className="w-4 h-4" /> {rowIndex}
+          </td>
+          {item.data.map((cell: any, j: number) => renderCell(String(cell || ''), 'old'))}
+          {Array.from({ length: maxCols - item.data.length }, (_, j) => (
+            <td key={`empty-old-${j}`} className="px-3 py-1 text-sm border-r bg-red-100"></td>
+          ))}
+        </tr>
+      );
+    }
+
+    // Modified
+    const changesMap = new Map(item.changes.map((c: any) => [c.colIndex, c]));
+    return (
+      <tr key={`mod-${item.rowIndex}`} className="border-t-2 border-yellow-300">
+        <td className="px-3 py-1 text-sm font-medium text-yellow-700 border-r flex items-center gap-1">
+          <Edit className="w-4 h-4" /> {rowIndex}
+        </td>
+        {Array.from({ length: maxCols }, (_, j) => {
+          const change = changesMap.get(j);
+          if (change) {
+            return (
+              <td key={j} className="px-3 py-1 text-sm border-r">
+                <div className="flex flex-col">
+                  <span className="bg-red-100 text-red-800 line-through">{change.oldValue}</span>
+                  <span className="bg-green-100 text-green-800 font-medium">{change.newValue}</span>
+                </div>
+              </td>
+            );
+          }
+          const val = String(item.originalRow[j] || '');
+          return renderCell(val, 'unchanged');
+        })}
+      </tr>
+    );
   };
 
   // So sánh 2 sheet đã chọn
@@ -268,13 +357,13 @@ const ExcelChangeTracker = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-6">
-      <div className="max-w-6xl mx-auto">
+      <div className="max-w-7xl mx-auto">
         <div className="bg-white rounded-2xl shadow-xl p-8">
           <div className="text-center mb-8">
             <h1 className="text-3xl font-bold text-gray-800 mb-2">
-              So Sánh 2 Sheet Excel
+              So Sánh 2 Sheet Excel (Git Diff Style)
             </h1>
-            <p className="text-gray-600">Upload 2 file → Chọn sheet → Xem thay đổi chi tiết</p>
+            <p className="text-gray-600">Upload 2 file → Chọn sheet → Xem diff như Git</p>
           </div>
 
           {/* Upload Files */}
@@ -343,101 +432,58 @@ const ExcelChangeTracker = () => {
             )}
           </div>
 
-          {/* Results */}
+          {/* Results - Git Diff Style Table */}
           {changes && (
-            <div className="space-y-6">
+            <div className="space-y-8">
               <div className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-lg p-6 shadow-lg">
-                <h2 className="text-2xl font-bold mb-2">Kết Quả So Sánh</h2>
+                <h2 className="text-2xl font-bold mb-2">Kết Quả So Sánh (Git Diff)</h2>
                 <div className="text-lg">
                   <span className="font-medium">{selectedOrigSheet}</span> → <span className="font-medium">{selectedModSheet}</span>
                   <br />
                   Tổng thay đổi: <span className="font-bold">{getTotalChanges()}</span> thay đổi
+                  {' | '} Không thay đổi: <span className="font-bold">{Object.values(changes)[0].unchanged}</span> dòng
                 </div>
               </div>
 
-              {Object.entries(changes).map(([sheetName, change]: [string, any]) => (
-                <div key={sheetName} className="border border-gray-200 rounded-lg overflow-hidden">
-                  <div className="bg-gray-100 px-6 py-4 border-b">
-                    <h3 className="text-xl font-bold text-gray-800">
-                      {change.origSheetName} → {change.modSheetName}
-                    </h3>
-                  </div>
+              {Object.entries(changes).map(([sheetName, change]: [string, any]) => {
+                const origData = change.deleted.length > 0 ? change.deleted[0].data : []; // Để tính maxCols
+                const modData = change.added.length > 0 ? change.added[0].data : [];
+                const allRows = [...change.deleted.map((d: any) => d.originalRow || d.data), ...change.modified.map((m: any) => m.originalRow), ...change.added.map((a: any) => a.data)];
+                const maxCols = Math.max(getMaxCols(allRows, allRows), 1); // Ít nhất 1 cột
 
-                  <div className="p-6 space-y-4">
-                    {change.added.length > 0 && (
-                      <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                        <h4 className="font-semibold text-green-800 mb-3 flex items-center gap-2">
-                          <CheckCircle className="w-5 h-5" />
-                          Dòng mới thêm ({change.added.length})
-                        </h4>
-                        {change.added.slice(0, 5).map((item: any, idx: number) => (
-                          <div key={idx} className="text-sm text-gray-700 mb-1">
-                            Dòng {item.rowIndex + 1}: {JSON.stringify(item.data).substring(0, 100)}...
-                          </div>
-                        ))}
-                        {change.added.length > 5 && (
-                          <div className="text-sm text-gray-500 mt-2">
-                            ... và {change.added.length - 5} dòng khác
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    {change.deleted.length > 0 && (
-                      <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                        <h4 className="font-semibold text-red-800 mb-3 flex items-center gap-2">
-                          <XCircle className="w-5 h-5" />
-                          Dòng bị xóa ({change.deleted.length})
-                        </h4>
-                        {change.deleted.slice(0, 5).map((item: any, idx: number) => (
-                          <div key={idx} className="text-sm text-gray-700 mb-1">
-                            Dòng {item.rowIndex + 1}: {JSON.stringify(item.data).substring(0, 100)}...
-                          </div>
-                        ))}
-                        {change.deleted.length > 5 && (
-                          <div className="text-sm text-gray-500 mt-2">
-                            ... và {change.deleted.length - 5} dòng khác
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    {change.modified.length > 0 && (
-                      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                        <h4 className="font-semibold text-yellow-800 mb-3 flex items-center gap-2">
-                          <Edit className="w-5 h-5" />
-                          Dòng bị sửa ({change.modified.length})
-                        </h4>
-                        {change.modified.slice(0, 5).map((item: any, idx: number) => (
-                          <div key={idx} className="mb-3 pb-3 border-b border-yellow-100 last:border-0">
-                            <div className="font-medium text-sm text-gray-800 mb-1">
-                              Dòng {item.rowIndex + 1}:
-                            </div>
-                            {item.changes.map((c: any, cidx: number) => (
-                              <div key={cidx} className="text-sm text-gray-700 ml-4">
-                                {c.cardNo ? `${c.cardNo}: ` : `Cột ${c.column}: `}
-                                <span className="text-red-600 line-through">"{c.oldValue}"</span> →{' '}
-                                <span className="text-green-600 font-medium">"{c.newValue}"</span>
-                              </div>
-                            ))}
-                          </div>
-                        ))}
-                        {change.modified.length > 5 && (
-                          <div className="text-sm text-gray-500 mt-2">
-                            ... và {change.modified.length - 5} dòng khác
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    {change.unchanged > 0 && (
+                return (
+                  <div key={sheetName} className="border border-gray-300 rounded-lg overflow-hidden shadow-md">
+                    <div className="bg-gray-100 px-6 py-3 border-b flex items-center justify-between">
+                      <h3 className="text-xl font-bold text-gray-800">
+                        {change.origSheetName} → {change.modSheetName}
+                      </h3>
                       <div className="text-sm text-gray-600">
-                        Không thay đổi: {change.unchanged} dòng
+                        +{change.added.length}  -{change.deleted.length}  ~{change.modified.length}
                       </div>
-                    )}
+                    </div>
+
+                    <div className="overflow-x-auto">
+                      <table className="min-w-full divide-y divide-gray-300 text-xs font-mono">
+                        {renderHeader(maxCols)}
+                        <tbody className="bg-white divide-y divide-gray-200">
+                          {/* Deleted rows */}
+                          {change.deleted.map((item: any) => renderDiffRow(item, maxCols, false, true))}
+
+                          {/* Modified & Added rows (interleaved by rowIndex) */}
+                          {[...change.modified, ...change.added].sort((a: any, b: any) => a.rowIndex - b.rowIndex).map((item: any) => 
+                            renderDiffRow(item, maxCols, 'data' in item, false)
+                          )}
+                        </tbody>
+                      </table>
+                      {change.unchanged > 0 && (
+                        <div className="px-6 py-3 text-sm text-gray-600 bg-gray-50">
+                          ... và {change.unchanged} dòng không thay đổi (đã ẩn để tập trung vào diff)
+                        </div>
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
