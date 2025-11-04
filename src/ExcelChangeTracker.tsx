@@ -252,8 +252,8 @@ const ExcelChangeTracker = () => {
 
     const report: string[] = [];
     report.push('=== BÁO CÁO THAY ĐỔI FILE EXCEL ===\n');
-    report.push(`File gốc: ${originalFile.name}`);
-    report.push(`File thay đổi: ${modifiedFile.name}`);
+    report.push(`File 1: ${originalFile.name}`);
+    report.push(`File 2: ${modifiedFile.name}`);
     report.push(`So sánh sheet: "${selectedOrigSheet}" vs "${selectedModSheet}"`);
     report.push(`Thời gian: ${new Date().toLocaleString('vi-VN')}\n`);
 
@@ -371,14 +371,14 @@ const ExcelChangeTracker = () => {
             {/* Upload Files */}
             <div className="grid md:grid-cols-2 gap-6 mb-6">
               <FileUploadBox
-                label="Upload File Gốc"
+                label="Upload File 1"
                 file={originalFile}
                 onChange={handleFileUpload}
                 color={originalFile ? 'border-green-300 bg-green-50' : 'border-gray-300'}
                 isOriginal={true}
               />
               <FileUploadBox
-                label="Upload File Đã Sửa"
+                label="Upload File 2"
                 file={modifiedFile}
                 onChange={handleFileUpload}
                 color={modifiedFile ? 'border-green-300 bg-green-50' : 'border-gray-300'}
@@ -393,13 +393,13 @@ const ExcelChangeTracker = () => {
                   sheets={originalSheets}
                   selected={selectedOrigSheet}
                   onChange={setSelectedOrigSheet}
-                  label="Chọn sheet từ file gốc"
+                  label="Chọn sheet từ file 1"
                 />
                 <SheetSelector
                   sheets={modifiedSheets}
                   selected={selectedModSheet}
                   onChange={setSelectedModSheet}
-                  label="Chọn sheet từ file đã sửa"
+                  label="Chọn sheet từ file 2"
                 />
               </div>
             )}
