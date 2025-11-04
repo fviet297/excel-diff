@@ -1,29 +1,35 @@
 import React, { useState } from 'react';
-import { Upload, FileSpreadsheet, AlertCircle, Download, CheckCircle, XCircle, Edit } from 'lucide-react';
+import { Upload, FileSpreadsheet, AlertCircle, Download, CheckCircle, XCircle, Edit, ChevronDown } from 'lucide-react';
 import * as XLSX from 'xlsx';
 
 const ExcelChangeTracker = () => {
-  const [originalFile, setOriginalFile] = useState(null);
-  const [modifiedFile, setModifiedFile] = useState(null);
-  const [changes, setChanges] = useState(null);
+  const [originalFile, setOriginalFile] = useState<File | null>(null);
+  const [modifiedFile, setModifiedFile] = useState<File | null>(null);
+  const [originalSheets, setOriginalSheets] = useState<string[]>([]);
+  const [modifiedSheets, setModifiedSheets] = useState<string[]>([]);
+  const [selectedOrigSheet, setSelectedOrigSheet] = useState<string>('');
+  const [selectedModSheet, setSelectedModSheet] = useState<string>('');
+  const [changes, setChanges] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const readExcelFile = async (file) => {
+  // Đọc file và trả về danh sách sheet + dữ liệu
+  const readExcelFile = async (file: File): Promise<{ sheets: string[]; data: any }> => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.onload = (e) => {
         try {
-          const data = new Uint8Array(e.target.result);
+          const data = new Uint8Array(e.target.result as ArrayBuffer);
           const workbook = XLSX.read(data, { type: 'array' });
-          const sheets = {};
-          
-          workbook.SheetNames.forEach(sheetName => {
+          const sheets = workbook.SheetNames;
+          const sheetData: any = {};
+
+          sheets.forEach(sheetName => {
             const worksheet = workbook.Sheets[sheetName];
-            sheets[sheetName] = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' });
+            sheetData[sheetName] = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' });
           });
-          
-          resolve(sheets);
+
+          resolve({ sheets, data: sheetData });
         } catch (err) {
           reject(err);
         }
@@ -33,137 +39,160 @@ const ExcelChangeTracker = () => {
     });
   };
 
-  const compareSheets = (original, modified) => {
-    const allSheets = new Set([...Object.keys(original), ...Object.keys(modified)]);
-    const sheetChanges = {};
-
-    allSheets.forEach(sheetName => {
-      const origSheet = original[sheetName] || [];
-      const modSheet = modified[sheetName] || [];
-      const sheetChange = {
-        added: [],
-        deleted: [],
-        modified: [],
-        unchanged: 0
-      };
-
-      if (!original[sheetName]) {
-        sheetChange.info = 'Sheet mới được thêm';
-        sheetChange.added = modSheet.map((row, idx) => ({ rowIndex: idx, data: row }));
-      } else if (!modified[sheetName]) {
-        sheetChange.info = 'Sheet đã bị xóa';
-        sheetChange.deleted = origSheet.map((row, idx) => ({ rowIndex: idx, data: row }));
+  // Xử lý khi upload file
+  const handleFileUpload = async (file: File | null, isOriginal: boolean) => {
+    if (!file) {
+      if (isOriginal) {
+        setOriginalFile(null);
+        setOriginalSheets([]);
+        setSelectedOrigSheet('');
       } else {
-        const maxRows = Math.max(origSheet.length, modSheet.length);
-        
-        for (let i = 0; i < maxRows; i++) {
-          const origRow = origSheet[i] || [];
-          const modRow = modSheet[i] || [];
-          
-          if (i >= origSheet.length) {
-            sheetChange.added.push({ rowIndex: i, data: modRow });
-          } else if (i >= modSheet.length) {
-            sheetChange.deleted.push({ rowIndex: i, data: origRow });
-          } else {
-            const rowDiff = [];
-            const maxCols = Math.max(origRow.length, modRow.length);
-            let hasChanges = false;
-
-            for (let j = 0; j < maxCols; j++) {
-              const origVal = String(origRow[j] || '');
-              const modVal = String(modRow[j] || '');
-              
-              if (origVal !== modVal) {
-                hasChanges = true;
-                rowDiff.push({
-                  colIndex: j,
-                  column: String.fromCharCode(65 + j),
-                  oldValue: origVal,
-                  newValue: modVal,
-				  cardNo: origRow[2]
-                });
-              }
-            }
-
-            if (hasChanges) {
-              sheetChange.modified.push({
-                rowIndex: i,
-                changes: rowDiff,
-                originalRow: origRow,
-                modifiedRow: modRow
-              });
-            } else {
-              sheetChange.unchanged++;
-            }
-          }
-        }
+        setModifiedFile(null);
+        setModifiedSheets([]);
+        setSelectedModSheet('');
       }
-
-      sheetChanges[sheetName] = sheetChange;
-    });
-
-    return sheetChanges;
-  };
-
-  const handleCompare = async () => {
-    if (!originalFile || !modifiedFile) {
-      setError('Vui lòng upload cả 2 file để so sánh');
+      setChanges(null);
       return;
     }
 
     setLoading(true);
     setError('');
+    try {
+      const { sheets } = await readExcelFile(file);
+      if (isOriginal) {
+        setOriginalFile(file);
+        setOriginalSheets(sheets);
+        setSelectedOrigSheet(sheets[0] || '');
+      } else {
+        setModifiedFile(file);
+        setModifiedSheets(sheets);
+        setSelectedModSheet(sheets[0] || '');
+      }
+    } catch (err: any) {
+      setError('Lỗi đọc file: ' + err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // So sánh 2 sheet đã chọn
+  const compareSheets = (origData: any, modData: any, origSheet: string, modSheet: string) => {
+    const sheetChange: any = {
+      added: [],
+      deleted: [],
+      modified: [],
+      unchanged: 0,
+      origSheetName: origSheet,
+      modSheetName: modSheet
+    };
+
+    const origSheetData = origData[origSheet] || [];
+    const modSheetData = modData[modSheet] || [];
+
+    const maxRows = Math.max(origSheetData.length, modSheetData.length);
+
+    for (let i = 0; i < maxRows; i++) {
+      const origRow = origSheetData[i] || [];
+      const modRow = modSheetData[i] || [];
+
+      if (i >= origSheetData.length) {
+        sheetChange.added.push({ rowIndex: i, data: modRow });
+      } else if (i >= modSheetData.length) {
+        sheetChange.deleted.push({ rowIndex: i, data: origRow });
+      } else {
+        const rowDiff: any[] = [];
+        const maxCols = Math.max(origRow.length, modRow.length);
+        let hasChanges = false;
+
+        for (let j = 0; j < maxCols; j++) {
+          const origVal = String(origRow[j] || '');
+          const modVal = String(modRow[j] || '');
+
+          if (origVal !== modVal) {
+            hasChanges = true;
+            rowDiff.push({
+              colIndex: j,
+              column: String.fromCharCode(65 + j),
+              oldValue: origVal,
+              newValue: modVal,
+              cardNo: origRow[2] || ''
+            });
+          }
+        }
+
+        if (hasChanges) {
+          sheetChange.modified.push({
+            rowIndex: i,
+            changes: rowDiff,
+            originalRow: origRow,
+            modifiedRow: modRow
+          });
+        } else {
+          sheetChange.unchanged++;
+        }
+      }
+    }
+
+    return { [modSheet]: sheetChange };
+  };
+
+  const handleCompare = async () => {
+    if (!originalFile || !modifiedFile || !selectedOrigSheet || !selectedModSheet) {
+      setError('Vui lòng chọn đầy đủ 2 file và 2 sheet để so sánh');
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+    setChanges(null);
 
     try {
-      const origData = await readExcelFile(originalFile);
-      const modData = await readExcelFile(modifiedFile);
-      const comparison = compareSheets(origData, modData);
+      const { data: origData } = await readExcelFile(originalFile);
+      const { data: modData } = await readExcelFile(modifiedFile);
+      const comparison = compareSheets(origData, modData, selectedOrigSheet, selectedModSheet);
       setChanges(comparison);
-    } catch (err) {
-      setError('Lỗi khi đọc file: ' + err.message);
+    } catch (err: any) {
+      setError('Lỗi khi so sánh: ' + err.message);
     } finally {
       setLoading(false);
     }
   };
 
   const exportChanges = () => {
-    if (!changes) return;
+    if (!changes || !originalFile || !modifiedFile) return;
 
-    const report = [];
+    const report: string[] = [];
     report.push('=== BÁO CÁO THAY ĐỔI FILE EXCEL ===\n');
     report.push(`File gốc: ${originalFile.name}`);
     report.push(`File thay đổi: ${modifiedFile.name}`);
+    report.push(`So sánh sheet: "${selectedOrigSheet}" vs "${selectedModSheet}"`);
     report.push(`Thời gian: ${new Date().toLocaleString('vi-VN')}\n`);
 
-    Object.entries(changes).forEach(([sheetName, change]) => {
+    Object.entries(changes).forEach(([sheetName, change]: [string, any]) => {
       report.push(`\n${'='.repeat(50)}`);
-      report.push(`SHEET: ${sheetName}`);
+      report.push(`SHEET: ${change.origSheetName} → ${change.modSheetName}`);
       report.push('='.repeat(50));
-
-      if (change.info) {
-        report.push(`\n${change.info}\n`);
-      }
 
       if (change.added.length > 0) {
         report.push(`\n[+] DÒNG MỚI THÊM: ${change.added.length}`);
-        change.added.forEach(item => {
+        change.added.forEach((item: any) => {
           report.push(`  Dòng ${item.rowIndex + 1}: ${JSON.stringify(item.data)}`);
         });
       }
 
       if (change.deleted.length > 0) {
         report.push(`\n[-] DÒNG BỊ XÓA: ${change.deleted.length}`);
-        change.deleted.forEach(item => {
+        change.deleted.forEach((item: any) => {
           report.push(`  Dòng ${item.rowIndex + 1}: ${JSON.stringify(item.data)}`);
         });
       }
 
       if (change.modified.length > 0) {
         report.push(`\n[~] DÒNG BỊ SỬA: ${change.modified.length}`);
-        change.modified.forEach(item => {
+        change.modified.forEach((item: any) => {
           report.push(`  Dòng ${item.rowIndex + 1}:`);
-          item.changes.forEach(c => {
-            report.push(`    Cột ${c.column}: "${c.oldValue}" → "${c.newValue}"`);
+          item.changes.forEach((c: any) => {
+            report.push(`    Cột ${c.column} (${c.cardNo}): "${c.oldValue}" → "${c.newValue}"`);
           });
         });
       }
@@ -177,12 +206,12 @@ const ExcelChangeTracker = () => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `change_report_${new Date().getTime()}.txt`;
+    a.download = `diff_${selectedOrigSheet}_vs_${selectedModSheet}_${Date.now()}.txt`;
     a.click();
     URL.revokeObjectURL(url);
   };
 
-  const FileUploadBox = ({ label, file, onChange, color }) => (
+  const FileUploadBox = ({ label, file, onChange, color, isOriginal }: any) => (
     <div className={`border-2 border-dashed rounded-lg p-6 ${color} transition-all`}>
       <div className="flex flex-col items-center gap-3">
         <FileSpreadsheet className="w-12 h-12 text-gray-400" />
@@ -193,7 +222,7 @@ const ExcelChangeTracker = () => {
           <input
             type="file"
             accept=".xlsx,.xls"
-            onChange={onChange}
+            onChange={(e) => onChange(e.target.files?.[0] || null, isOriginal)}
             className="hidden"
           />
         </label>
@@ -207,9 +236,32 @@ const ExcelChangeTracker = () => {
     </div>
   );
 
+  const SheetSelector = ({ sheets, selected, onChange, label }: any) => (
+    <div className="relative">
+      <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
+      <div className="relative">
+        <select
+          value={selected}
+          onChange={(e) => onChange(e.target.value)}
+          disabled={!sheets.length}
+          className="w-full appearance-none bg-white border border-gray-300 rounded-lg px-4 py-2 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
+        >
+          {sheets.length === 0 ? (
+            <option value="">Không có sheet</option>
+          ) : (
+            sheets.map((sheet: string) => (
+              <option key={sheet} value={sheet}>{sheet}</option>
+            ))
+          )}
+        </select>
+        <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" />
+      </div>
+    </div>
+  );
+
   const getTotalChanges = () => {
     if (!changes) return 0;
-    return Object.values(changes).reduce((sum, change) => 
+    return Object.values(changes).reduce((sum: number, change: any) =>
       sum + change.added.length + change.deleted.length + change.modified.length, 0
     );
   };
@@ -220,26 +272,48 @@ const ExcelChangeTracker = () => {
         <div className="bg-white rounded-2xl shadow-xl p-8">
           <div className="text-center mb-8">
             <h1 className="text-3xl font-bold text-gray-800 mb-2">
-              Theo Dõi Thay Đổi File Excel
+              So Sánh 2 Sheet Excel
             </h1>
-            <p className="text-gray-600">Upload 2 file Excel để xem chi tiết các thay đổi</p>
+            <p className="text-gray-600">Upload 2 file → Chọn sheet → Xem thay đổi chi tiết</p>
           </div>
 
+          {/* Upload Files */}
           <div className="grid md:grid-cols-2 gap-6 mb-6">
             <FileUploadBox
               label="Upload File Gốc"
               file={originalFile}
-              onChange={(e) => setOriginalFile(e.target.files[0])}
+              onChange={handleFileUpload}
               color={originalFile ? 'border-green-300 bg-green-50' : 'border-gray-300'}
+              isOriginal={true}
             />
             <FileUploadBox
-              label="Upload File Đã Thay Đổi"
+              label="Upload File Đã Sửa"
               file={modifiedFile}
-              onChange={(e) => setModifiedFile(e.target.files[0])}
+              onChange={handleFileUpload}
               color={modifiedFile ? 'border-green-300 bg-green-50' : 'border-gray-300'}
+              isOriginal={false}
             />
           </div>
 
+          {/* Sheet Selectors */}
+          {(originalSheets.length > 0 || modifiedSheets.length > 0) && (
+            <div className="grid md:grid-cols-2 gap-6 mb-6 p-6 bg-gray-50 rounded-xl border">
+              <SheetSelector
+                sheets={originalSheets}
+                selected={selectedOrigSheet}
+                onChange={setSelectedOrigSheet}
+                label="Chọn sheet từ file gốc"
+              />
+              <SheetSelector
+                sheets={modifiedSheets}
+                selected={selectedModSheet}
+                onChange={setSelectedModSheet}
+                label="Chọn sheet từ file đã sửa"
+              />
+            </div>
+          )}
+
+          {/* Error */}
           {error && (
             <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6 flex items-center gap-3">
               <AlertCircle className="w-5 h-5 text-red-500" />
@@ -247,16 +321,17 @@ const ExcelChangeTracker = () => {
             </div>
           )}
 
+          {/* Action Buttons */}
           <div className="flex gap-4 justify-center mb-8">
             <button
               onClick={handleCompare}
-              disabled={!originalFile || !modifiedFile || loading}
+              disabled={!originalFile || !modifiedFile || !selectedOrigSheet || !selectedModSheet || loading}
               className="px-6 py-3 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-lg font-medium hover:from-blue-600 hover:to-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 shadow-lg"
             >
               <Upload className="w-5 h-5" />
-              {loading ? 'Đang so sánh...' : 'So Sánh File'}
+              {loading ? 'Đang so sánh...' : 'So Sánh Sheet'}
             </button>
-            
+
             {changes && (
               <button
                 onClick={exportChanges}
@@ -268,22 +343,24 @@ const ExcelChangeTracker = () => {
             )}
           </div>
 
+          {/* Results */}
           {changes && (
             <div className="space-y-6">
               <div className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-lg p-6 shadow-lg">
-                <h2 className="text-2xl font-bold mb-2">Tổng Quan Thay Đổi</h2>
+                <h2 className="text-2xl font-bold mb-2">Kết Quả So Sánh</h2>
                 <div className="text-lg">
-                  Tổng số thay đổi: <span className="font-bold">{getTotalChanges()}</span> thay đổi
+                  <span className="font-medium">{selectedOrigSheet}</span> → <span className="font-medium">{selectedModSheet}</span>
+                  <br />
+                  Tổng thay đổi: <span className="font-bold">{getTotalChanges()}</span> thay đổi
                 </div>
               </div>
 
-              {Object.entries(changes).map(([sheetName, change]) => (
+              {Object.entries(changes).map(([sheetName, change]: [string, any]) => (
                 <div key={sheetName} className="border border-gray-200 rounded-lg overflow-hidden">
                   <div className="bg-gray-100 px-6 py-4 border-b">
-                    <h3 className="text-xl font-bold text-gray-800">Sheet: {sheetName}</h3>
-                    {change.info && (
-                      <p className="text-sm text-gray-600 mt-1">{change.info}</p>
-                    )}
+                    <h3 className="text-xl font-bold text-gray-800">
+                      {change.origSheetName} → {change.modSheetName}
+                    </h3>
                   </div>
 
                   <div className="p-6 space-y-4">
@@ -293,7 +370,7 @@ const ExcelChangeTracker = () => {
                           <CheckCircle className="w-5 h-5" />
                           Dòng mới thêm ({change.added.length})
                         </h4>
-                        {change.added.slice(0, 5).map((item, idx) => (
+                        {change.added.slice(0, 5).map((item: any, idx: number) => (
                           <div key={idx} className="text-sm text-gray-700 mb-1">
                             Dòng {item.rowIndex + 1}: {JSON.stringify(item.data).substring(0, 100)}...
                           </div>
@@ -312,7 +389,7 @@ const ExcelChangeTracker = () => {
                           <XCircle className="w-5 h-5" />
                           Dòng bị xóa ({change.deleted.length})
                         </h4>
-                        {change.deleted.slice(0, 5).map((item, idx) => (
+                        {change.deleted.slice(0, 5).map((item: any, idx: number) => (
                           <div key={idx} className="text-sm text-gray-700 mb-1">
                             Dòng {item.rowIndex + 1}: {JSON.stringify(item.data).substring(0, 100)}...
                           </div>
@@ -331,14 +408,16 @@ const ExcelChangeTracker = () => {
                           <Edit className="w-5 h-5" />
                           Dòng bị sửa ({change.modified.length})
                         </h4>
-                        {change.modified.slice(0, 5).map((item, idx) => (
+                        {change.modified.slice(0, 5).map((item: any, idx: number) => (
                           <div key={idx} className="mb-3 pb-3 border-b border-yellow-100 last:border-0">
                             <div className="font-medium text-sm text-gray-800 mb-1">
                               Dòng {item.rowIndex + 1}:
                             </div>
-                            {item.changes.map((c, cidx) => (
+                            {item.changes.map((c: any, cidx: number) => (
                               <div key={cidx} className="text-sm text-gray-700 ml-4">
-                                {c.cardNo}: <span className="text-red-600 line-through">"{c.oldValue}"</span> → <span className="text-green-600 font-medium">"{c.newValue}"</span>
+                                {c.cardNo ? `${c.cardNo}: ` : `Cột ${c.column}: `}
+                                <span className="text-red-600 line-through">"{c.oldValue}"</span> →{' '}
+                                <span className="text-green-600 font-medium">"{c.newValue}"</span>
                               </div>
                             ))}
                           </div>
