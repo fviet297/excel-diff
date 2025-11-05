@@ -54,8 +54,8 @@ export default function App() {
           if (json.length === 0) return;
 
           const header = json[0].map((h: string) => h.toString().trim().toLowerCase());
-          const cardCol = header.findIndex((h) => h.includes('card') || h === 'ths');
-          const statusCol = header.findIndex((h) => h.includes('status') || h.includes('trạng thái'));
+          const cardCol = header.findIndex((h) => h.includes('TEMP PASS'));
+          const statusCol = header.findIndex((h) => h.includes('STATUS'));
 
           if (cardCol === -1 || statusCol === -1) return;
 
@@ -133,7 +133,7 @@ export default function App() {
       // 1. Kiểm tra trùng "Not Yet Return"
       const notYetMap = new Map<string, CardRow[]>();
       data1.forEach((row) => {
-        if (row.status.toLowerCase().includes('not yet return')) {
+        if (row.status.toLowerCase().includes('Not yet returned')) {
           if (!notYetMap.has(row.card)) notYetMap.set(row.card, []);
           notYetMap.get(row.card)!.push(row);
         }
@@ -161,8 +161,8 @@ export default function App() {
         if (!statusesInFile2) return;
 
         const norm1 = row1.status.toLowerCase();
-        const isReturned1 = norm1.includes('returned');
-        const isNotYet1 = norm1.includes('not yet return');
+        const isReturned1 = norm1.includes('Returned');
+        const isNotYet1 = norm1.includes('Not yet returned');
         const hasReturned2 = [...statusesInFile2].some(s => s.toLowerCase().includes('returned'));
 
         if (isReturned1 && !hasReturned2) {
