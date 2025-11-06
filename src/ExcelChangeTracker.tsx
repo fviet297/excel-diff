@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { Upload, FileSpreadsheet, AlertCircle, Download, CheckCircle, XCircle, Edit, ChevronDown, Minus, Plus, Mail, Phone, Linkedin, Github } from 'lucide-react';
 import * as XLSX from 'xlsx';
 
@@ -11,25 +11,15 @@ const ExcelChangeTracker = () => {
   const [selectedModSheet, setSelectedModSheet] = useState<string>('');
   const [changes, setChanges] = useState<any>(null);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-
-  // Đọc file và trả về danh sách sheet + dữ liệu
-  const readExcelFile = async (file: File): Promise<{ sheets: string[]; data: any }> => {
+  const [error, setError] = useState('');  // Đọc CHỈ danh sách sheet
+  const readSheetNames = async (file: File): Promise<string[]> => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.onload = (e) => {
         try {
           const data = new Uint8Array(e.target!.result as ArrayBuffer);
           const workbook = XLSX.read(data, { type: 'array' });
-          const sheets = workbook.SheetNames;
-          const sheetData: any = {};
-
-          sheets.forEach(sheetName => {
-            const worksheet = workbook.Sheets[sheetName];
-            sheetData[sheetName] = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' });
-          });
-
-          resolve({ sheets, data: sheetData });
+          resolve(workbook.SheetNames);
         } catch (err) {
           reject(err);
         }
@@ -38,6 +28,28 @@ const ExcelChangeTracker = () => {
       reader.readAsArrayBuffer(file);
     });
   };
+
+  // Đọc dữ liệu của MỘT sheet đã chọn
+  const readSheetData = async (file: File, sheetName: string): Promise<any[][]> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const data = new Uint8Array(e.target!.result as ArrayBuffer);
+          const workbook = XLSX.read(data, { type: 'array' });
+          const worksheet = workbook.Sheets[sheetName];
+          if (!worksheet) return resolve([]);
+          const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' }) as any[][];
+          resolve(rows);
+        } catch (err) {
+          reject(err);
+        }
+      };
+      reader.onerror = reject;
+      reader.readAsArrayBuffer(file);
+    });
+  };
+
 
   // Xử lý khi upload file
   const handleFileUpload = async (file: File | null, isOriginal: boolean) => {
@@ -58,7 +70,7 @@ const ExcelChangeTracker = () => {
     setLoading(true);
     setError('');
     try {
-      const { sheets } = await readExcelFile(file);
+      const sheets = await readSheetNames(file);
       if (isOriginal) {
         setOriginalFile(file);
         setOriginalSheets(sheets);
@@ -236,8 +248,10 @@ const ExcelChangeTracker = () => {
     setChanges(null);
 
     try {
-      const { data: origData } = await readExcelFile(originalFile);
-      const { data: modData } = await readExcelFile(modifiedFile);
+            const origRows = await readSheetData(originalFile, selectedOrigSheet);
+      const modRows = await readSheetData(modifiedFile, selectedModSheet);
+      const origData: any = { [selectedOrigSheet]: origRows };
+      const modData: any = { [selectedModSheet]: modRows };
       const comparison = compareSheets(origData, modData, selectedOrigSheet, selectedModSheet);
       setChanges(comparison);
     } catch (err: any) {

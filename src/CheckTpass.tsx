@@ -31,8 +31,16 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Đọc file Excel
-  const readExcelFile = (file: File, includeData: boolean = false): Promise<{ sheets: string[]; data?: CardRow[] }> => {
+  // Đọc file Excel với tùy chọn lọc sheet và cấu hình header
+  const readExcelFile = (
+    file: File,
+    includeData: boolean = false,
+    options?: {
+      sheetFilter?: Set<string>; // Chỉ đọc các sheet trong tập này (nếu cung cấp)
+      cardHeaderIncludes?: string[]; // Các từ khóa (lowercase) để tìm cột mã thẻ
+      statusHeaderIncludes?: string[]; // Các từ khóa (lowercase) để tìm cột trạng thái
+    }
+  ): Promise<{ sheets: string[]; data?: CardRow[] }> => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.onload = (e) => {
@@ -42,6 +50,8 @@ export default function App() {
         const rows: CardRow[] = [];
 
         workbook.SheetNames.forEach((sheetName) => {
+          // Bỏ qua sheet nếu có filter và sheet không nằm trong danh sách
+          if (options?.sheetFilter && !options.sheetFilter.has(sheetName)) return;
           // if (!/^T-Pass\s+\w+-\d{4}$/.test(sheetName)) return;
 
           validSheets.push(sheetName);
@@ -54,8 +64,10 @@ export default function App() {
           if (json.length === 0) return;
 
           const header = json[0].map((h: string) => h.toString().trim().toLowerCase());
-          const cardCol = header.findIndex((h) => h.includes('TEMP PASS'));
-          const statusCol = header.findIndex((h) => h.includes('STATUS'));
+          const cardKeywords = (options?.cardHeaderIncludes ?? ['temp pass']).map(s => s.toLowerCase());
+          const statusKeywords = (options?.statusHeaderIncludes ?? ['status']).map(s => s.toLowerCase());
+          const cardCol = header.findIndex((h) => cardKeywords.some(k => h.includes(k)));
+          const statusCol = header.findIndex((h) => statusKeywords.some(k => h.includes(k)));
 
           if (cardCol === -1 || statusCol === -1) return;
 
@@ -123,17 +135,28 @@ export default function App() {
     setError(null);
 
     try {
-      const { data: rawData1 } = await readExcelFile(file1, true);
-      const data1 = rawData1!.filter(row => selectedSheetNames.includes(row.sheet));
+      // Chỉ đọc dữ liệu từ các sheet đã chọn của File 1
+      const selectedSet = new Set(selectedSheetNames);
+      const resp1 = await readExcelFile(file1, true, {
+        sheetFilter: selectedSet,
+        cardHeaderIncludes: ['temp pass'],
+        statusHeaderIncludes: ['status'],
+      });
+      const data1: CardRow[] = resp1.data ?? [];
 
-      const { data: data2 } = await readExcelFile(file2, true);
+      // Đọc File 2 theo cột "First Name" (mã thẻ) và "Card Status"
+      const resp2 = await readExcelFile(file2, true, {
+        cardHeaderIncludes: ['first name'],
+        statusHeaderIncludes: ['card status'],
+      });
+      const data2: CardRow[] = resp2.data ?? [];
 
       const errors: ValidationResult[] = [];
 
       // 1. Kiểm tra trùng "Not Yet Return"
       const notYetMap = new Map<string, CardRow[]>();
       data1.forEach((row) => {
-        if (row.status.toLowerCase().includes('Not yet returned')) {
+        if (row.status.toLowerCase().includes('not yet')) {
           if (!notYetMap.has(row.card)) notYetMap.set(row.card, []);
           notYetMap.get(row.card)!.push(row);
         }
@@ -143,7 +166,7 @@ export default function App() {
         if (rows.length > 1) {
           errors.push({
             type: 'error',
-            message: `Thẻ ${card} có ${rows.length} dòng "Not Yet Return"`,
+            message: `Thẻ ${card} có ${rows.length} dòng "Not yet returned"`,
             details: rows.map(r => r.sheet),
           });
         }
@@ -161,8 +184,8 @@ export default function App() {
         if (!statusesInFile2) return;
 
         const norm1 = row1.status.toLowerCase();
-        const isReturned1 = norm1.includes('Returned');
-        const isNotYet1 = norm1.includes('Not yet returned');
+        const isReturned1 = norm1.includes('returned');
+        const isNotYet1 = norm1.includes('not yet');
         const hasReturned2 = [...statusesInFile2].some(s => s.toLowerCase().includes('returned'));
 
         if (isReturned1 && !hasReturned2) {
@@ -185,7 +208,7 @@ export default function App() {
       // === KIỂM TRA MỚI: File 2 có "Active" nhưng File 1 không có "Not Yet Return" ===
       const file1NotYetCards = new Set<string>();
       data1.forEach((row) => {
-        if (row.status.toLowerCase().includes('not yet return')) {
+        if (row.status.toLowerCase().includes('not yet')) {
           file1NotYetCards.add(row.card);
         }
       });

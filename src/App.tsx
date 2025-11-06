@@ -51,9 +51,7 @@ export default function App() {
               </button>
             </nav>
           </div>
-          <a href={view === 'tpass' ? '#/tpass' : '#/excel-diff'} className="text-xs text-gray-500 hover:text-gray-700">
-            {window.location.hash || '#/tpass'}
-          </a>
+
         </div>
       </header>
 
