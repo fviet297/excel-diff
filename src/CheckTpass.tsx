@@ -187,15 +187,6 @@ export default function App() {
         const isReturned1 = norm1.includes('returned');
         const isNotYet1 = norm1.includes('not yet');
         const hasReturned2 = [...statusesInFile2].some(s => s.toLowerCase().includes('returned'));
-
-        if (isReturned1 && !hasReturned2) {
-          errors.push({
-            type: 'fail',
-            message: `Thẻ ${row1.card}: File 1 "Returned" → File 2 không có "Returned"`,
-            details: [`Sheet: ${row1.sheet}`, `File 2: ${[...statusesInFile2].join(', ')}`],
-          });
-        }
-
         if (isNotYet1 && hasReturned2) {
           errors.push({
             type: 'fail',
