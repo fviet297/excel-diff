@@ -188,18 +188,18 @@ export default function App() {
         const isNotYet1 = norm1.includes('not yet');
         const hasReturned2 = [...statusesInFile2].some(s => s.toLowerCase().includes('returned'));
 
-        if (isReturned1 && !hasReturned2) {
-          errors.push({
-            type: 'fail',
-            message: `Thẻ ${row1.card}: File 1 "Returned" → File 2 không có "Returned"`,
-            details: [`Sheet: ${row1.sheet}`, `File 2: ${[...statusesInFile2].join(', ')}`],
-          });
-        }
+        // if (isReturned1 && !hasReturned2) {
+        //   errors.push({
+        //     type: 'fail',
+        //     message: `Thẻ ${row1.card}: File 1 "Returned" → File 2 không có "Returned"`,
+        //     details: [`Sheet: ${row1.sheet}`, `File 2: ${[...statusesInFile2].join(', ')}`],
+        //   });
+        // }
 
         if (isNotYet1 && hasReturned2) {
           errors.push({
             type: 'fail',
-            message: `Thẻ ${row1.card}: File 1 "Not Yet Return" → File 2 có "Returned"`,
+            message: `Thẻ ${row1.card}: File 1 "Not Yet Returned" → File 2 có "Returned"`,
             details: [`Sheet: ${row1.sheet}`, `File 2: ${[...statusesInFile2].join(', ')}`],
           });
         }
@@ -218,7 +218,7 @@ export default function App() {
           if (!file1NotYetCards.has(row2.card)) {
             errors.push({
               type: 'fail',
-              message: `Thẻ ${row2.card} đang "Active" trong File 2 nhưng chưa có "Not Yet Return" trong File 1`,
+              message: `Thẻ ${row2.card} đang "Active" trong File 2 nhưng chưa có "Not Yet Returned" trong File 1`,
               details: [
                 `Sheet File 2: ${row2.sheet}`,
                 `Không tìm thấy trong các sheet đã chọn của File 1`
@@ -258,7 +258,8 @@ export default function App() {
     <>
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex flex-col">
         {/* Main Content */}
-        <div className="flex-1 p-6">
+        <div className="flex-1 py-2 px-6">
+
           <div className="max-w-7xl mx-auto">
             <div className="bg-white rounded-2xl shadow-xl p-8">
               <div className="text-center mb-8">

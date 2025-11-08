@@ -2,16 +2,18 @@ import React, { useEffect, useState } from 'react';
 import CheckTpass from './CheckTpass';
 import ExcelChangeTracker from './ExcelChangeTracker';
 import AppFooter from './AppFooter';
+import UpdateSAC from './UpdateSAC';
 
 
 // Các route đơn giản qua URL hash
 // #/tpass hoặc #/excel-diff
 
-type View = 'tpass' | 'excel-diff';
+type View = 'tpass' | 'excel-diff' | 'sac';
 
 const getViewFromHash = (): View => {
   const hash = (window.location.hash || '').toLowerCase();
   if (hash.includes('excel')) return 'excel-diff';
+  if (hash.includes('sac')) return 'sac';
   return 'tpass';
 };
 
@@ -25,7 +27,7 @@ export default function App() {
   }, []);
 
   const goto = (v: View) => {
-    window.location.hash = v === 'tpass' ? '/tpass' : '/excel-diff';
+    window.location.hash = v === 'tpass' ? '/tpass' : v === 'excel-diff' ? '/excel-diff' : '/sac';
   };
 
   return (
@@ -49,6 +51,12 @@ export default function App() {
               >
                 Excel Diff
               </button>
+              <button
+                onClick={() => goto('sac')}
+                className={`${view === 'sac' ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'} px-3 py-1.5 rounded-md text-sm font-medium`}
+              >
+                SAC
+              </button>
             </nav>
           </div>
 
@@ -57,7 +65,7 @@ export default function App() {
 
       {/* Nội dung trang */}
       <main className="flex-1">
-        {view === 'tpass' ? <CheckTpass /> : <ExcelChangeTracker />}
+        {view === 'tpass' ? <CheckTpass /> : view === 'excel-diff' ? <ExcelChangeTracker /> : <UpdateSAC />}
       </main>
       <AppFooter />
     </div>
