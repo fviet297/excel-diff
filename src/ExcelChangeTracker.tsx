@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import { Upload, FileSpreadsheet, AlertCircle, Download, CheckCircle, XCircle, Edit, ChevronDown, Minus, Plus, Mail, Phone, Linkedin, Github } from 'lucide-react';
 import * as XLSX from 'xlsx';
 
@@ -370,7 +370,7 @@ const ExcelChangeTracker = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex flex-col">
+    <div className="min-h-[85vh] bg-gradient-to-br from-blue-50 to-indigo-100 flex flex-col">
       {/* Main Content */}
         <div className="flex-1 py-2 px-6">
         <div className="max-w-7xl mx-auto">

@@ -256,7 +256,7 @@ export default function App() {
 
   return (
     <>
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex flex-col">
+      <div className="min-h-[85vh] bg-gradient-to-br from-blue-50 to-indigo-100 flex flex-col">
         {/* Main Content */}
         <div className="flex-1 py-2 px-6">
 
