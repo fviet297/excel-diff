@@ -135,7 +135,6 @@ export default function App() {
     setError(null);
 
     try {
-      // Chỉ đọc dữ liệu từ các sheet đã chọn của File 1
       const selectedSet = new Set(selectedSheetNames);
       const resp1 = await readExcelFile(file1, true, {
         sheetFilter: selectedSet,
@@ -144,7 +143,6 @@ export default function App() {
       });
       const data1: CardRow[] = resp1.data ?? [];
 
-      // Đọc File 2 theo cột "First Name" (mã thẻ) và "Card Status"
       const resp2 = await readExcelFile(file2, true, {
         cardHeaderIncludes: ['first name'],
         statusHeaderIncludes: ['card status'],
@@ -153,7 +151,6 @@ export default function App() {
 
       const errors: ValidationResult[] = [];
 
-      // 1. Kiểm tra trùng "Not Yet Return"
       const notYetMap = new Map<string, CardRow[]>();
       data1.forEach((row) => {
         if (row.status.toLowerCase().includes('not yet')) {
@@ -172,7 +169,6 @@ export default function App() {
         }
       });
 
-      // 2. So sánh trạng thái
       const file2StatusMap = new Map<string, Set<string>>();
       data2.forEach((row) => {
         if (!file2StatusMap.has(row.card)) file2StatusMap.set(row.card, new Set());
@@ -205,7 +201,6 @@ export default function App() {
         }
       });
 
-      // === KIỂM TRA MỚI: File 2 có "Active" nhưng File 1 không có "Not Yet Return" ===
       const file1NotYetCards = new Set<string>();
       data1.forEach((row) => {
         if (row.status.toLowerCase().includes('not yet')) {
