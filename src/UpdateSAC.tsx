@@ -9,12 +9,11 @@ export default function ExcelMerger() {
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
   
-  // Tên cột có thể tùy chỉnh
   const [columns, setColumns] = useState({
-    file1Source: 'Event Source',
-    file1Target: 'Remark',
-    file2Code: 'Code',
-    file2Value: 'Cam No'
+    file1Source: 'Source',
+    file1Target: 'Target',
+    file2Code: 'Mapping Code',
+    file2Value: 'Mapping Value'
   });
 
   const [showSettings, setShowSettings] = useState(false);
@@ -116,7 +115,7 @@ export default function ExcelMerger() {
       XLSX.utils.book_append_sheet(wb, ws, 'Sheet1');
       
       // Xuất file
-      XLSX.writeFile(wb, 'file_da_chinh_sua.xlsx');
+      XLSX.writeFile(wb, 'output.xlsx');
 
       setResult({
         total: data1.length,
@@ -136,7 +135,7 @@ export default function ExcelMerger() {
         <div className="bg-white rounded-2xl shadow-xl p-8">
           <div className="flex items-center justify-between mb-2">
             <h1 className="text-3xl font-bold text-gray-800">
-              Công cụ chỉnh sửa Excel
+              Công cụ mapping Excel
             </h1>
             <button
               onClick={() => setShowSettings(!showSettings)}

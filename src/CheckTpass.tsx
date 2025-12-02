@@ -245,7 +245,7 @@ export default function App() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `T-Pass-Report-${new Date().toISOString().slice(0, 10)}.txt`;
+    a.download = `Report-${new Date().toISOString().slice(0, 10)}.txt`;
     a.click();
   };
 
@@ -260,7 +260,7 @@ export default function App() {
               <div className="text-center mb-8">
                 <h1 className="text-3xl font-bold text-gray-800 mb-2 flex items-center justify-center gap-2">
                   <FileSpreadsheet className="w-8 h-8 text-indigo-600" />
-                  T-Pass Checker
+                 Report Checker
                 </h1>
                 <p className="text-gray-600">Upload 2 file → Chọn sheet → Kiểm tra trạng thái</p>
               </div>
@@ -269,7 +269,7 @@ export default function App() {
               <div className="grid md:grid-cols-2 gap-6 mb-6">
                 <div className={`border-2 border-dashed rounded-xl p-6 text-center transition-all ${file1 ? 'border-green-400 bg-green-50' : 'border-gray-300 hover:border-gray-400'}`}>
                   <Upload className="w-12 h-12 mx-auto mb-3 text-gray-400" />
-                  <label className="block font-medium text-gray-700 mb-2">File T-Pass</label>
+                  <label className="block font-medium text-gray-700 mb-2">File Report 1</label>
                   <input
                     type="file"
                     accept=".xlsx"
@@ -285,7 +285,7 @@ export default function App() {
 
                 <div className={`border-2 border-dashed rounded-xl p-6 text-center transition-all ${file2 ? 'border-green-400 bg-green-50' : 'border-gray-300 hover:border-gray-400'}`}>
                   <Upload className="w-12 h-12 mx-auto mb-3 text-gray-400" />
-                  <label className="block font-medium text-gray-700 mb-2">File Report GLG</label>
+                  <label className="block font-medium text-gray-700 mb-2">File Report 2</label>
                   <input
                     type="file"
                     accept=".xlsx"

@@ -6,15 +6,15 @@ import UpdateSAC from './UpdateSAC';
 
 
 // Các route đơn giản qua URL hash
-// #/tpass hoặc #/excel-diff
+// #/checker hoặc #/excel-diff
 
-type View = 'tpass' | 'excel-diff' | 'sac';
+type View = 'checker' | 'excel-diff' | 'mapping';
 
 const getViewFromHash = (): View => {
   const hash = (window.location.hash || '').toLowerCase();
   if (hash.includes('excel')) return 'excel-diff';
-  if (hash.includes('sac')) return 'sac';
-  return 'tpass';
+  if (hash.includes('mapping')) return 'mapping';
+  return 'checker';
 };
 
 export default function App() {
@@ -27,7 +27,7 @@ export default function App() {
   }, []);
 
   const goto = (v: View) => {
-    window.location.hash = v === 'tpass' ? '/tpass' : v === 'excel-diff' ? '/excel-diff' : '/sac';
+    window.location.hash = v === 'checker' ? '/checker' : v === 'excel-diff' ? '/excel-diff' : '/mapping';
   };
 
   return (
@@ -40,10 +40,10 @@ export default function App() {
             <span className="text-gray-400">|</span>
             <nav className="flex items-center gap-2">
               <button
-                onClick={() => goto('tpass')}
-                className={`${view === 'tpass' ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'} px-3 py-1.5 rounded-md text-sm font-medium`}
+                onClick={() => goto('checker')}
+                className={`${view === 'checker' ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'} px-3 py-1.5 rounded-md text-sm font-medium`}
               >
-                T-Pass Checker
+               Report Checker
               </button>
               <button
                 onClick={() => goto('excel-diff')}
@@ -52,10 +52,10 @@ export default function App() {
                 Excel Diff
               </button>
               <button
-                onClick={() => goto('sac')}
-                className={`${view === 'sac' ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'} px-3 py-1.5 rounded-md text-sm font-medium`}
+                onClick={() => goto('mapping')}
+                className={`${view === 'mapping' ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'} px-3 py-1.5 rounded-md text-sm font-medium`}
               >
-                SAC
+                Mapping
               </button>
             </nav>
           </div>
@@ -65,7 +65,7 @@ export default function App() {
 
       {/* Nội dung trang */}
       <main className="flex-1">
-        {view === 'tpass' ? <CheckTpass /> : view === 'excel-diff' ? <ExcelChangeTracker /> : <UpdateSAC />}
+        {view === 'checker' ? <CheckTpass /> : view === 'excel-diff' ? <ExcelChangeTracker /> : <UpdateSAC />}
       </main>
       <AppFooter />
     </div>
