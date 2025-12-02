@@ -1,4 +1,4 @@
-import * as XLSX from 'xlsx';
+import * as XLSX from 'xlsx-js-style';
 
 export type FileKey = 'source1' | 'source2' | 'source3' | 'source4' | 'destination';
 
@@ -127,7 +127,16 @@ export class ExcelMappingEngine {
           const addr = XLSX.utils.encode_cell({ r, c });
           const v = rows[i][j];
           if (v === undefined || v === null) continue;
-          (dstSheet as any)[addr] = { t: typeof v === 'number' ? 'n' : 's', v } as any;
+          (dstSheet as any)[addr] = {
+            t: typeof v === 'number' ? 'n' : 's',
+            v,
+            s: {
+              fill: {
+                patternType: 'solid',
+                fgColor: { rgb: 'C6EFCE' }, // xanh lá nhạt
+              },
+            },
+          } as any;
         }
       }
 

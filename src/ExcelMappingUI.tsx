@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Upload, Plus, Trash2, Download, AlertCircle, CheckCircle } from 'lucide-react';
-import * as XLSX from 'xlsx';
+import * as XLSX from 'xlsx-js-style';
 import { ExcelMappingEngine, type FileKey, type MappingItem } from './ExcelMappingEngine';
 
 interface LoadedFile {
