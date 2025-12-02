@@ -3,16 +3,18 @@ import CheckTpass from './CheckTpass';
 import ExcelChangeTracker from './ExcelChangeTracker';
 import AppFooter from './AppFooter';
 import UpdateSAC from './UpdateSAC';
+import ExcelMappingUI from './ExcelMappingUI';
 
 
 // Các route đơn giản qua URL hash
 // #/checker hoặc #/excel-diff
 
-type View = 'checker' | 'excel-diff' | 'mapping';
+type View = 'checker' | 'excel-diff' | 'mapping' | 'excel-mapping';
 
 const getViewFromHash = (): View => {
   const hash = (window.location.hash || '').toLowerCase();
-  if (hash.includes('excel')) return 'excel-diff';
+  if (hash.includes('excel-mapping')) return 'excel-mapping';
+  if (hash.includes('excel-diff')) return 'excel-diff';
   if (hash.includes('mapping')) return 'mapping';
   return 'checker';
 };
@@ -27,7 +29,14 @@ export default function App() {
   }, []);
 
   const goto = (v: View) => {
-    window.location.hash = v === 'checker' ? '/checker' : v === 'excel-diff' ? '/excel-diff' : '/mapping';
+    window.location.hash =
+      v === 'checker'
+        ? '/checker'
+        : v === 'excel-diff'
+        ? '/excel-diff'
+        : v === 'excel-mapping'
+        ? '/excel-mapping'
+        : '/mapping';
   };
 
   return (
@@ -57,6 +66,12 @@ export default function App() {
               >
                 Mapping
               </button>
+              <button
+                onClick={() => goto('excel-mapping')}
+                className={`${view === 'excel-mapping' ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'} px-3 py-1.5 rounded-md text-sm font-medium`}
+              >
+                Excel Mapping
+              </button>
             </nav>
           </div>
 
@@ -65,7 +80,13 @@ export default function App() {
 
       {/* Nội dung trang */}
       <main className="flex-1">
-        {view === 'checker' ? <CheckTpass /> : view === 'excel-diff' ? <ExcelChangeTracker /> : <UpdateSAC />}
+        {view === 'checker'
+          ? <CheckTpass />
+          : view === 'excel-diff'
+          ? <ExcelChangeTracker />
+          : view === 'mapping'
+          ? <UpdateSAC />
+          : <ExcelMappingUI />}
       </main>
       <AppFooter />
     </div>
