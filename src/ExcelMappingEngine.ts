@@ -1,6 +1,6 @@
 import * as XLSX from 'xlsx';
 
-export type FileKey = 'source1' | 'source2' | 'source3' | 'destination';
+export type FileKey = 'source1' | 'source2' | 'source3' | 'source4' | 'destination';
 
 export interface RangeRef {
   sheet: string;
@@ -17,6 +17,7 @@ export interface LoadedWorkbooks {
   source1?: XLSX.WorkBook;
   source2?: XLSX.WorkBook;
   source3?: XLSX.WorkBook;
+  source4?: XLSX.WorkBook;
   destination?: XLSX.WorkBook;
 }
 

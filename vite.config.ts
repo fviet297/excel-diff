@@ -6,5 +6,12 @@ export default defineConfig({
   build: {
     outDir: 'dist',  // Đảm bảo output vào dist
     emptyOutDir: true,
+    sourcemap: false,
+  },
+  css: {
+    devSourcemap: false,
+  },
+  esbuild: {
+    sourcemap: false,
   },
 })

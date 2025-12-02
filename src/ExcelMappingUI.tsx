@@ -11,12 +11,21 @@ interface LoadedFile {
 }
 
 const LS_KEY_MAPPINGS = 'excelMappingUI.mappings.v1';
+const LS_KEY_CONFIGS = 'excelMappingUI.configs.v1';
+
+interface SavedConfig {
+  id: string;
+  name: string;
+  mappings: MappingItem[];
+  createdAt: number;
+}
 
 export default function ExcelMappingUI() {
   const [files, setFiles] = useState<Record<FileKey, LoadedFile>>({
     source1: { key: 'source1', sheetNames: [] },
     source2: { key: 'source2', sheetNames: [] },
     source3: { key: 'source3', sheetNames: [] },
+    source4: { key: 'source4', sheetNames: [] },
     destination: { key: 'destination', sheetNames: [] },
   });
 
@@ -38,11 +47,25 @@ export default function ExcelMappingUI() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
+  const [savedConfigs, setSavedConfigs] = useState<SavedConfig[]>([]);
+  const [configName, setConfigName] = useState('');
+  const [selectedConfigId, setSelectedConfigId] = useState<string>('');
+
   useEffect(() => {
     try { localStorage.setItem(LS_KEY_MAPPINGS, JSON.stringify(mappings)); } catch {}
   }, [mappings]);
 
-  const canRun = useMemo(() => !!files.destination.wb && (files.source1.wb || files.source2.wb || files.source3.wb), [files]);
+  const canRun = useMemo(() => !!files.destination.wb && (files.source1.wb || files.source2.wb || files.source3.wb || files.source4.wb), [files]);
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(LS_KEY_CONFIGS);
+      if (raw) {
+        const list = JSON.parse(raw) as SavedConfig[];
+        setSavedConfigs(Array.isArray(list) ? list : []);
+      }
+    } catch {}
+  }, []);
 
   const readFileToWorkbook = (file: File): Promise<XLSX.WorkBook> => {
     return new Promise((resolve, reject) => {
@@ -95,6 +118,39 @@ export default function ExcelMappingUI() {
     setMappings(prev => prev.filter((_, i) => i !== idx));
   };
 
+  const persistConfigs = (list: SavedConfig[]) => {
+    setSavedConfigs(list);
+    try { localStorage.setItem(LS_KEY_CONFIGS, JSON.stringify(list)); } catch {}
+  };
+
+  const saveCurrentConfig = () => {
+    const name = configName.trim() || `Cấu hình ${new Date().toLocaleString()}`;
+    const id = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const cfg: SavedConfig = { id, name, mappings: mappings, createdAt: Date.now() };
+    const next = [cfg, ...savedConfigs];
+    persistConfigs(next);
+    setConfigName('');
+    setSelectedConfigId(id);
+    setSuccess(`Đã lưu cấu hình "${name}"`);
+  };
+
+  const applyConfig = () => {
+    if (!selectedConfigId) return;
+    const found = savedConfigs.find(x => x.id === selectedConfigId);
+    if (!found) return;
+    setMappings(found.mappings);
+    setSuccess(`Đã áp dụng cấu hình "${found.name}"`);
+  };
+
+  const deleteConfig = () => {
+    if (!selectedConfigId) return;
+    const found = savedConfigs.find(x => x.id === selectedConfigId);
+    const next = savedConfigs.filter(x => x.id !== selectedConfigId);
+    persistConfigs(next);
+    setSelectedConfigId(next[0]?.id || '');
+    setSuccess(found ? `Đã xóa cấu hình "${found.name}"` : 'Đã xóa cấu hình');
+  };
+
   const onRun = async () => {
     setBusy(true);
     setError(null);
@@ -140,13 +196,38 @@ export default function ExcelMappingUI() {
       <div className="max-w-5xl mx-auto">
         <div className="bg-white rounded-2xl shadow-xl p-8">
           <h1 className="text-2xl font-bold text-gray-800 mb-1">Mapping dữ liệu giữa các file Excel</h1>
-          <p className="text-gray-600 mb-6">Upload tối đa 3 file nguồn và 1 file đích. Cài đặt các vùng copy và vị trí dán trong file đích, sau đó nhấn Update.</p>
+          <p className="text-gray-600 mb-6">Upload tối đa 4 file nguồn và 1 file đích. Cài đặt các vùng copy và vị trí dán trong file đích, sau đó nhấn Update.</p>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
             {renderFilePicker('Nguồn 1', 'source1')}
             {renderFilePicker('Nguồn 2', 'source2')}
             {renderFilePicker('Nguồn 3', 'source3')}
+            {renderFilePicker('Nguồn 4', 'source4')}
             {renderFilePicker('File đích', 'destination')}
+          </div>
+
+          <div className="mb-6 p-4 border rounded-lg bg-gray-50">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
+              <div className="md:col-span-1">
+                <label className="block text-xs text-gray-600 mb-1">Tên cấu hình</label>
+                <input value={configName} onChange={(e) => setConfigName(e.target.value)} className="w-full border rounded-md px-2 py-2 text-sm" placeholder="Ví dụ: Cấu hình A" />
+              </div>
+              <div className="flex gap-2">
+                <button onClick={saveCurrentConfig} className="inline-flex items-center px-3 py-2 text-sm bg-indigo-600 text-white rounded-md hover:bg-indigo-700">Lưu cấu hình</button>
+              </div>
+              {savedConfigs.length > 0 && (
+                <div className="md:col-span-3 grid grid-cols-1 md:grid-cols-3 gap-2">
+                  <select value={selectedConfigId} onChange={(e) => setSelectedConfigId(e.target.value)} className="w-full border rounded-md px-2 py-2 text-sm">
+                    <option value="">Chọn cấu hình đã lưu</option>
+                    {savedConfigs.map(c => (
+                      <option key={c.id} value={c.id}>{c.name}</option>
+                    ))}
+                  </select>
+                  <button onClick={applyConfig} disabled={!selectedConfigId} className="inline-flex items-center px-3 py-2 text-sm bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50">Áp dụng</button>
+                  <button onClick={deleteConfig} disabled={!selectedConfigId} className="inline-flex items-center px-3 py-2 text-sm bg-red-600 text-white rounded-md hover:bg-red-700 disabled:opacity-50">Xóa</button>
+                </div>
+              )}
+            </div>
           </div>
 
           <div className="mb-4 flex items-center justify-between">
@@ -165,6 +246,7 @@ export default function ExcelMappingUI() {
                     <option value="source1">source1</option>
                     <option value="source2">source2</option>
                     <option value="source3">source3</option>
+                    <option value="source4">source4</option>
                   </select>
                 </div>
 
