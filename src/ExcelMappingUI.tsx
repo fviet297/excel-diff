@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Upload, Plus, Trash2, Download, AlertCircle, CheckCircle } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { ExcelMappingEngine, type FileKey, type MappingItem } from './ExcelMappingEngine';
@@ -10,6 +10,8 @@ interface LoadedFile {
   sheetNames: string[];
 }
 
+const LS_KEY_MAPPINGS = 'excelMappingUI.mappings.v1';
+
 export default function ExcelMappingUI() {
   const [files, setFiles] = useState<Record<FileKey, LoadedFile>>({
     source1: { key: 'source1', sheetNames: [] },
@@ -18,17 +20,27 @@ export default function ExcelMappingUI() {
     destination: { key: 'destination', sheetNames: [] },
   });
 
-  const [mappings, setMappings] = useState<MappingItem[]>([
-    {
-      sourceKey: 'source1',
-      from: { sheet: '', range: 'A1:A10' },
-      to: { sheet: '', range: 'A1' },
-    },
-  ]);
+  const [mappings, setMappings] = useState<MappingItem[]>(() => {
+    try {
+      const saved = localStorage.getItem(LS_KEY_MAPPINGS);
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    return [
+      {
+        sourceKey: 'source1',
+        from: { sheet: '', range: 'A1:A10' },
+        to: { sheet: '', range: 'A1' },
+      },
+    ];
+  });
 
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+
+  useEffect(() => {
+    try { localStorage.setItem(LS_KEY_MAPPINGS, JSON.stringify(mappings)); } catch {}
+  }, [mappings]);
 
   const canRun = useMemo(() => !!files.destination.wb && (files.source1.wb || files.source2.wb || files.source3.wb), [files]);
 

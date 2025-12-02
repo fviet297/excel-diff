@@ -1,6 +1,13 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Upload, Download, CheckCircle, AlertCircle, Settings } from 'lucide-react';
 import * as XLSX from 'xlsx';
+
+type Columns = {
+  file1Source: string;
+  file1Target: string;
+  file2Code: string;
+  file2Value: string;
+};
 
 export default function ExcelMerger() {
   const [file1, setFile1] = useState(null);
@@ -9,14 +16,24 @@ export default function ExcelMerger() {
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
   
-  const [columns, setColumns] = useState({
-    file1Source: 'Source',
-    file1Target: 'Target',
-    file2Code: 'Mapping Code',
-    file2Value: 'Mapping Value'
+  const [columns, setColumns] = useState<Columns>(() => {
+    try {
+      const saved = localStorage.getItem('updateSAC.columns.v1');
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    return {
+      file1Source: 'Source',
+      file1Target: 'Target',
+      file2Code: 'Mapping Code',
+      file2Value: 'Mapping Value'
+    };
   });
 
   const [showSettings, setShowSettings] = useState(false);
+
+  useEffect(() => {
+    try { localStorage.setItem('updateSAC.columns.v1', JSON.stringify(columns)); } catch {}
+  }, [columns]);
 
   const handleFileUpload = (e, fileNumber) => {
     const file = e.target.files[0];
@@ -31,8 +48,8 @@ export default function ExcelMerger() {
     }
   };
 
-  const handleColumnChange = (key, value) => {
-    setColumns(prev => ({
+  const handleColumnChange = (key: keyof Columns, value: string) => {
+    setColumns((prev: Columns) => ({
       ...prev,
       [key]: value
     }));
