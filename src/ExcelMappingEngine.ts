@@ -24,6 +24,7 @@ export interface LoadedWorkbooks {
 export class ExcelMappingEngine {
   private books: LoadedWorkbooks = {};
   private mappings: MappingItem[] = [];
+  private defaultSheets: Partial<Record<FileKey, string>> = {};
 
   setWorkbook(key: FileKey, wb: XLSX.WorkBook) {
     this.books[key] = wb;
@@ -31,6 +32,10 @@ export class ExcelMappingEngine {
 
   setMappings(items: MappingItem[]) {
     this.mappings = items || [];
+  }
+
+  setDefaultSheets(sheets: Partial<Record<FileKey, string>>) {
+    this.defaultSheets = sheets || {};
   }
 
   private ensureSheet(wb: XLSX.WorkBook | undefined, name: string): XLSX.WorkSheet | null {
@@ -59,11 +64,13 @@ export class ExcelMappingEngine {
         errors.push(`Thiếu file nguồn: ${m.sourceKey}`);
         continue;
       }
-      const srcSheet = this.ensureSheet(srcBook, m.from.sheet);
-      if (!srcSheet) errors.push(`Không tìm thấy sheet "${m.from.sheet}" trong ${m.sourceKey}`);
+      const effSrcSheetName = m.from.sheet || this.defaultSheets[m.sourceKey] || '';
+      const srcSheet = this.ensureSheet(srcBook, effSrcSheetName);
+      if (!srcSheet) errors.push(`Không tìm thấy sheet "${effSrcSheetName}" trong ${m.sourceKey}`);
 
-      const dstSheet = this.ensureSheet(this.books.destination, m.to.sheet);
-      if (!dstSheet) errors.push(`Không tìm thấy sheet "${m.to.sheet}" trong file đích`);
+      const effDstSheetName = m.to.sheet || this.defaultSheets.destination || '';
+      const dstSheet = this.ensureSheet(this.books.destination, effDstSheetName);
+      if (!dstSheet) errors.push(`Không tìm thấy sheet "${effDstSheetName}" trong file đích`);
 
       try {
         this.parseRange(m.from.range);
@@ -82,22 +89,17 @@ export class ExcelMappingEngine {
 
   apply(): XLSX.WorkBook {
     if (!this.books.destination) throw new Error('Chưa có file đích');
-    // Clone destination book to avoid mutating original
-    const dst = XLSX.utils.book_new();
-    // Shallow clone each sheet
-    for (const name of this.books.destination.SheetNames) {
-      const ws = this.books.destination.Sheets[name];
-      const newWs: XLSX.WorkSheet = {} as XLSX.WorkSheet;
-      Object.assign(newWs, ws);
-      XLSX.utils.book_append_sheet(dst, newWs, name);
-    }
+    // Edit in place on the destination workbook
+    const dst = this.books.destination;
 
     for (const m of this.mappings) {
       const srcBook = this.books[m.sourceKey];
       if (!srcBook) continue;
 
-      const srcSheet = this.ensureSheet(srcBook, m.from.sheet);
-      const dstSheet = this.ensureSheet(dst, m.to.sheet);
+      const effSrcSheetName = m.from.sheet || this.defaultSheets[m.sourceKey] || '';
+      const effDstSheetName = m.to.sheet || this.defaultSheets.destination || '';
+      const srcSheet = this.ensureSheet(srcBook, effSrcSheetName);
+      const dstSheet = this.ensureSheet(dst, effDstSheetName);
       if (!srcSheet || !dstSheet) continue;
 
       const srcRange = this.parseRange(m.from.range);
@@ -119,7 +121,7 @@ export class ExcelMappingEngine {
       const startR = dstRange.s.r;
       const startC = dstRange.s.c;
 
-      // Paste rows into destination
+      // Paste rows into destination: only modify target cells; preserve existing formatting by merging styles
       for (let i = 0; i < rows.length; i++) {
         for (let j = 0; j < rows[i].length; j++) {
           const r = startR + i;
@@ -127,24 +129,36 @@ export class ExcelMappingEngine {
           const addr = XLSX.utils.encode_cell({ r, c });
           const v = rows[i][j];
           if (v === undefined || v === null) continue;
-          (dstSheet as any)[addr] = {
-            t: typeof v === 'number' ? 'n' : 's',
-            v,
-            s: {
-              fill: {
-                patternType: 'solid',
-                fgColor: { rgb: 'C6EFCE' }, // xanh lá nhạt
-              },
+          const existing = (dstSheet as any)[addr] || {};
+          const existingStyle = { ...(existing.s || {}) };
+          const mergedStyle = {
+            ...existingStyle,
+            fill: {
+              patternType: 'solid',
+              fgColor: { rgb: 'C6EFCE' }, // xanh lá nhạt
             },
+          };
+
+          const cellType = typeof v === 'number' ? 'n' : typeof v === 'boolean' ? 'b' : 's';
+
+          (dstSheet as any)[addr] = {
+            ...existing,
+            t: cellType,
+            v,
+            s: mergedStyle,
           } as any;
         }
       }
 
-      // Update sheet range (!ref)
+      // Update sheet range (!ref): preserve current start, only expand end if needed
       const pastedEndR = startR + rows.length - 1;
       const pastedEndC = startC + (rows[0]?.length || 1) - 1;
-      const newRef = XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: Math.max(pastedEndR, dstRange.e.r), c: Math.max(pastedEndC, dstRange.e.c) } });
-      (dstSheet as any)['!ref'] = newRef;
+      const curRefStr = (dstSheet as any)['!ref'];
+      const curRef = curRefStr ? XLSX.utils.decode_range(curRefStr) : { s: { r: 0, c: 0 }, e: { r: 0, c: 0 } };
+      const newEndR = Math.max(curRef.e.r, pastedEndR, dstRange.e.r);
+      const newEndC = Math.max(curRef.e.c, pastedEndC, dstRange.e.c);
+      const updatedRef = XLSX.utils.encode_range({ s: { r: curRef.s.r, c: curRef.s.c }, e: { r: newEndR, c: newEndC } });
+      (dstSheet as any)['!ref'] = updatedRef;
     }
 
     return dst;

@@ -18,6 +18,7 @@ interface SavedConfig {
   name: string;
   mappings: MappingItem[];
   createdAt: number;
+  defaultSheets?: Partial<Record<FileKey, string>>;
 }
 
 export default function ExcelMappingUI() {
@@ -50,6 +51,13 @@ export default function ExcelMappingUI() {
   const [savedConfigs, setSavedConfigs] = useState<SavedConfig[]>([]);
   const [configName, setConfigName] = useState('');
   const [selectedConfigId, setSelectedConfigId] = useState<string>('');
+  const [defaultSheets, setDefaultSheets] = useState<Partial<Record<FileKey, string>>>({
+    source1: '',
+    source2: '',
+    source3: '',
+    source4: '',
+    destination: '',
+  });
 
   useEffect(() => {
     try { localStorage.setItem(LS_KEY_MAPPINGS, JSON.stringify(mappings)); } catch {}
@@ -126,7 +134,7 @@ export default function ExcelMappingUI() {
   const saveCurrentConfig = () => {
     const name = configName.trim() || `Cấu hình ${new Date().toLocaleString()}`;
     const id = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-    const cfg: SavedConfig = { id, name, mappings: mappings, createdAt: Date.now() };
+    const cfg: SavedConfig = { id, name, mappings: mappings, createdAt: Date.now(), defaultSheets };
     const next = [cfg, ...savedConfigs];
     persistConfigs(next);
     setConfigName('');
@@ -139,6 +147,7 @@ export default function ExcelMappingUI() {
     const found = savedConfigs.find(x => x.id === selectedConfigId);
     if (!found) return;
     setMappings(found.mappings);
+    if (found.defaultSheets) setDefaultSheets(found.defaultSheets);
     setSuccess(`Đã áp dụng cấu hình "${found.name}"`);
   };
 
@@ -162,6 +171,7 @@ export default function ExcelMappingUI() {
         if (item.wb) engine.setWorkbook(k, item.wb);
       }
       engine.setMappings(mappings);
+      engine.setDefaultSheets(defaultSheets);
       const v = engine.validate();
       if (!v.ok) {
         setError(v.errors.join('\n'));
@@ -188,6 +198,13 @@ export default function ExcelMappingUI() {
         </span>
         <span className="text-xs text-gray-500">{files[key].sheetNames.length ? `${files[key].sheetNames.length} sheets` : 'Chưa đọc sheet'}</span>
       </label>
+      <div className="mt-2">
+        <label className="block text-xs text-gray-600 mb-1">Sheet name</label>
+        <input list={`sheets-${key}`} value={defaultSheets[key] || ''} onChange={(e) => setDefaultSheets(prev => ({ ...prev, [key]: e.target.value }))} className="w-full border rounded-md px-2 py-2 text-sm" placeholder="Tên sheet" />
+        <datalist id={`sheets-${key}`}>
+          {(files[key].sheetNames || []).map(s => <option key={s} value={s} />)}
+        </datalist>
+      </div>
     </div>
   );
 
@@ -251,24 +268,8 @@ export default function ExcelMappingUI() {
                 </div>
 
                 <div>
-                  <label className="block text-xs text-gray-600 mb-1">Sheet nguồn</label>
-                  <input list={`sheets-src-${idx}`} value={m.from.sheet} onChange={(e) => updateMappingField(idx, 'from.sheet', e.target.value)} className="w-full border rounded-md px-2 py-2 text-sm" placeholder="Tên sheet" />
-                  <datalist id={`sheets-src-${idx}`}>
-                    {(files[m.sourceKey].sheetNames || []).map(s => <option key={s} value={s} />)}
-                  </datalist>
-                </div>
-
-                <div>
                   <label className="block text-xs text-gray-600 mb-1">Vùng nguồn (A1:D10)</label>
                   <input value={m.from.range} onChange={(e) => updateMappingField(idx, 'from.range', e.target.value)} className="w-full border rounded-md px-2 py-2 text-sm" placeholder="A1:D10" />
-                </div>
-
-                <div>
-                  <label className="block text-xs text-gray-600 mb-1">Sheet đích</label>
-                  <input list={`sheets-dst-${idx}`} value={m.to.sheet} onChange={(e) => updateMappingField(idx, 'to.sheet', e.target.value)} className="w-full border rounded-md px-2 py-2 text-sm" placeholder="Tên sheet" />
-                  <datalist id={`sheets-dst-${idx}`}>
-                    {(files.destination.sheetNames || []).map(s => <option key={s} value={s} />)}
-                  </datalist>
                 </div>
 
                 <div>
