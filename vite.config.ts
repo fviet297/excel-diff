@@ -4,14 +4,7 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   plugins: [react()],
   build: {
-    outDir: 'dist',  // Đảm bảo output vào dist
-    emptyOutDir: true,
-    sourcemap: false,
-  },
-  css: {
-    devSourcemap: false,
-  },
-  esbuild: {
-    sourcemap: false,
-  },
+    outDir: 'dist',
+    emptyOutDir: true
+  }
 })
